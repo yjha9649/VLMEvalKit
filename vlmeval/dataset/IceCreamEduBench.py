@@ -1,7 +1,7 @@
 
 
 
-class IceCreamEduDataset(ImageBaseDataset):
+class IceCreamEduBench(ImageBaseDataset):
 
     def build_prompt(self, line):
         img_path = line['image_path']

@@ -54,6 +54,8 @@ from ..smp import *
 from .Omnidocbench.omnidocbench import OmniDocBench
 from .moat import MOAT
 
+from .IceCreamEduBench import IceCreamEduBench
+
 
 class ConcatDataset(ImageBaseDataset):
     # This dataset takes multiple dataset names as input and aggregate them into a single dataset.
@@ -150,7 +152,7 @@ IMAGE_DATASET = [
     OlympiadBench, WildVision, MMMath, QSpatial, Dynamath, MMGenBench, VizWiz, 
     MMNIAH, CMMMU, VLRewardBench, WeMath, LogicVista, MMMUProDataset, 
     CreationMMBenchDataset, ImageShortQADataset, MMAlignBench, OmniDocBench, 
-    VLM2Bench, VMCBenchDataset, EMMADataset, MME_CoT, MOAT
+    VLM2Bench, VMCBenchDataset, EMMADataset, MME_CoT, MOAT, IceCreamEduBench
 ]
 
 
