@@ -66,11 +66,12 @@ def localize_df(data, dname, nproc=32):
 
 
 def LMUDataRoot():
-    if 'LMUData' in os.environ and osp.exists(os.environ['LMUData']):
-        return os.environ['LMUData']
-    home = osp.expanduser('~')
-    root = osp.join(home, 'LMUData')
-    os.makedirs(root, exist_ok=True)
+    # if 'LMUData' in os.environ and osp.exists(os.environ['LMUData']):
+    #     return os.environ['LMUData']
+    # home = osp.expanduser('~')
+    # root = osp.join(home, 'LMUData')
+    # os.makedirs(root, exist_ok=True)
+    root = '/Users/yoojin_ha/Desktop/개발/VLM_Evaluation/VLMEvalKit/LMUData'
     return root
 
 
