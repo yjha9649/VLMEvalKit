@@ -119,7 +119,7 @@ api_models = {
     ),
     "GPT4o": partial(
         GPT4V,
-        model="gpt-4o-2024-05-13",
+        model="gpt-4o-2024-08-06",
         temperature=0,
         img_size=512,
         img_detail="low",
