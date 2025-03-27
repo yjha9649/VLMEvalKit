@@ -55,7 +55,7 @@ class IceCreamEduBench(ImageBaseDataset):
             prompt += sqa_prompt
         elif q_type == "long_answer":
             lqa_prompt = '질문에 대한 정답을 구체적으로 작성해 주세요.'
-            prompt += sqa_prompt
+            prompt += lqa_prompt
 
         msgs = []
         if isinstance(img_path, list):
@@ -68,7 +68,6 @@ class IceCreamEduBench(ImageBaseDataset):
     def evaluate(self, eval_file, **judge_kwargs):
     
         pred_correct = 0
-        judge_dict = dict()
 
         data = load(eval_file)
         dataset = self.dataset_name
@@ -79,25 +78,31 @@ class IceCreamEduBench(ImageBaseDataset):
         # pool = mp.Pool(16)
         lines = [data.iloc[i] for i in range(lt)]
 
+        log_list = []
+
         for line in lines:
             q_type = line['q_type']
             answer = line['answer']
             prediction = line['prediction']
 
             if q_type == "multi_choices":
-                prediction = extract_answer_number(prediction)
                 answer = circled_number_to_digit(answer)
-            elif q_type == "short_answer":
+                prediction = extract_answer_number(prediction)
+                correct = is_correct_prediction(prediction, answer)
+            else:
                 prediction = extract_short_answer(prediction)
                 answer = extract_short_answer(answer)
-            
-            correct = eval_multi_choice(answer, prediction)
+                correct = eval_multi_choice(prediction, answer)
 
             if correct:
-                judge_dict[line['index']] = 'Correct'
                 pred_correct += 1
+                log_list.append('Correct')
             else:
-                judge_dict[line['index']] = 'Wrong'
+                log_list.append('Wrong')
         
-        return judge_dict, {'acc': pred_correct / len(lines)}
+        data['log'] = log_list
+        data_log_pth = eval_file.replace('.xlsx', '_log.xlsx')
+        dump(data, data_log_pth)
+        
+        return {'acc': pred_correct / len(lines)}
 
