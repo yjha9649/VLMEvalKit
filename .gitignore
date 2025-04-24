@@ -199,4 +199,4 @@ vlmeval/gemini_tmp.py
 notebook/
 LMUData/
 yjha*
-logs/
+.DS_Store
