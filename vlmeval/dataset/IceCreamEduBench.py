@@ -12,7 +12,7 @@ class IceCreamEduBench(ImageBaseDataset):
     }
 
     DATASET_MD5 = {
-        'IceCreamEdu_TEST': 'd46af35bc5357660a76d058d958fda30'
+        'IceCreamEdu_TEST': '6f4df4ed8a9a62977d253a6509548864'
     }
 
     def build_prompt(self, line):
