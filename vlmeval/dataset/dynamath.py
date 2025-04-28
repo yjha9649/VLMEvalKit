@@ -15,6 +15,7 @@ from ..smp import load, dump, d2df, toliststr
 
 
 def preprocess(str1):
+    str1 = str(str1)
     if 0 <= str1.find("{") < str1.rfind("}"):
         str1 = str1[str1.find("{"): str1.rfind("}") + 1]
     str2 = str1.replace("\\", "")
@@ -66,7 +67,7 @@ def DynaMath_auxeval(model, line):
         dj = json.loads(pred, strict=False)
         short_answer = dj.get("short answer")
         assert short_answer is not None
-        succeed, short_answer = parse_answer(short_answer, answer_type=line['anwser_type'])
+        succeed, short_answer = parse_answer(short_answer, answer_type=line['answer_type'])
         assert succeed
     except:
         # Failed to parse the JSON, use an auxiliary LLM to get the short answer
