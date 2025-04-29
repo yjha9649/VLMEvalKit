@@ -71,7 +71,7 @@ def LMUDataRoot():
     # home = osp.expanduser('~')
     # root = osp.join(home, 'LMUData')
     # os.makedirs(root, exist_ok=True)
-    root = '/Users/yoojin_ha/Desktop/개발/VLM_Evaluation/VLMEvalKit/LMUData'
+    root = '/Users/yoojin_ha/Desktop/Dev/VLM_Evaluation/VLMEvalKit/LMUData'
     return root
 
 
