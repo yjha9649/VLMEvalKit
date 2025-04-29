@@ -613,6 +613,9 @@ llava_series = {
     "varco-vision-hf": partial(
         LLaVA_OneVision_HF, model_path="NCSOFT/VARCO-VISION-14B-HF"
     ),
+    "hyperclovax-seed-vision": partial(
+        LLaVA_OneVision, model_path="naver-hyperclovax/HyperCLOVAX-SEED-Vision-Instruct-3B"
+    )
 }
 
 vita_series = {
