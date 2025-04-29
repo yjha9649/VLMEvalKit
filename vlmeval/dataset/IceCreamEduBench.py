@@ -2,13 +2,14 @@ from .image_base import ImageBaseDataset
 import pandas as pd
 from .utils.IceCreamEduBench import *
 from ..smp import *
+import os
 
 class IceCreamEduBench(ImageBaseDataset):
 
     TYPE = 'MCQ'
 
     DATASET_URL = {
-        'IceCreamEdu_TEST': '/Users/yoojin_ha/Desktop/개발/VLM_Evaluation/VLMEvalKit/LMUData/IceCreamEdu_TEST.tsv',
+        'IceCreamEdu_TEST': '/Users/yoojin_ha/Desktop/Dev/VLM_Evaluation/VLMEvalKit/LMUData/IceCreamEdu_TEST.tsv',
     }
 
     DATASET_MD5 = {
@@ -16,10 +17,10 @@ class IceCreamEduBench(ImageBaseDataset):
     }
 
     def build_prompt(self, line):
-        img_path = line['image_path']
+        img_path = os.path.join("/Users/yoojin_ha/Desktop/Dev/VLM_Evaluation/VLMEvalKit/LMUData/images/IceCreamEdu_TEST", line['image_path'])
         context = line['context']
         question = line['question']
-        q_type = line['q_type']
+        a_type = line['a_type']
 
         prompt = ''
 
@@ -27,7 +28,8 @@ class IceCreamEduBench(ImageBaseDataset):
             prompt += f'지문: {context}\n'
         prompt += f'질문: {question}\n'
 
-        if q_type == "multi_choices":
+        # MCQ 유형
+        if a_type == "options":
             A = line['보기1']
             B = line['보기2']
             C = line['보기3']
@@ -45,17 +47,49 @@ class IceCreamEduBench(ImageBaseDataset):
                 options_prompt += f'4번. {D}\n'
             if not pd.isna(E):
                 options_prompt += f'5번. {E}\n'
-            # mcq_prompt = '위의 선택지 중 정답이 되는 번호를 작성해 주세요.\n※ 선택지 번호만 작성하고, 여러 개일 경우 쉼표로 구분해 주세요.\n※ 반드시 선택지 번호와 쉼표 외에는 아무것도 쓰지 마세요. (해설, 설명, 단어 등 금지)\n'
-            mcq_prompt = '질문에 답하고, 정답인 선택지 번호만 출력하세요. (예: 1번, 2번, 3번 등. 복수 정답일 경우 모든 정답 번호를 적으세요.) 해설은 출력하지 마세요.'
+                
+            task_prompt = '질문에 답하고, 정답인 선택지 번호만 출력하세요. 정답이 하나일 경우 번호 하나만(예: 1번), 여러 개일 경우 쉼표로 구분하여 모두 출력하세요(예: 2번, 4번). 해설은 출력하지 마세요.'
             prompt += options_prompt
-            prompt += mcq_prompt
+            prompt += task_prompt
             
-        elif q_type == "short_answer":
-            sqa_prompt = '질문에 대한 정답을 한 단어 또는 짧은 문장으로 작성해 주세요.'
-            prompt += sqa_prompt
-        elif q_type == "long_answer":
-            lqa_prompt = '질문에 대한 정답을 구체적으로 작성해 주세요.'
-            prompt += lqa_prompt
+        # 숫자 답변
+        elif a_type == "number":
+            task_prompt = '질문에 답하고, 정답이 되는 숫자만 출력하세요. 정답이 하나일 경우 숫자 하나만, 여러 개일 경우 쉼표나 번호 등으로 구분하여 모두 출력하세요. 해설이나 설명은 출력하지 마세요.'
+            prompt += task_prompt
+            
+        # 단어 답변
+        elif a_type == "word":
+            task_prompt = '질문에 답하고, 정답이 되는 단어나 구만 출력하세요. 정답이 하나일 경우 단어 하나만, 여러 개일 경우 쉼표나 번호 등으로 구분하여 모두 출력하세요. 해설이나 설명은 출력하지 마세요.'
+            prompt += task_prompt            
+            
+        # 기호 답변
+        elif a_type == "symbol":
+            task_prompt = '질문에 답하고, 정답이 되는 기호만 출력하세요. 정답이 하나일 경우 기호 하나만, 여러 개일 경우 쉼표, 번호, 슬래시 등으로 구분하여 모두 출력하세요. 해설이나 설명은 출력하지 마세요.'
+            prompt += task_prompt            
+            
+        # 수식 답변
+        elif a_type == "formula":
+            task_prompt = '질문에 답하고, 정답이 되는 수식을 LaTeX 형식으로 출력하세요. 정답이 하나일 경우 수식 하나만, 여러 개일 경우 쉼표나 번호로 구분하여 모두 출력하세요. 해설이나 설명은 출력하지 마세요.'
+            prompt += task_prompt            
+            
+        # 마크다운 답변
+        elif a_type == "md":
+            task_prompt = '질문에 답하고, 정답이 되는 내용을 마크다운 형식의 표로 작성하세요. 해설이나 설명은 출력하지 마세요.'
+            prompt += task_prompt            
+            
+        # 이미지 답변
+        elif a_type == "image":
+            task_prompt = '질문에 답하고, 정답만 출력하세요. 해설이나 설명은 출력하지 마세요.'
+            prompt += task_prompt
+        
+        # 복합 답변
+        elif "mixed" in a_type:
+            task_prompt = '질문에 답하고, 정답만 출력하세요. 해설이나 설명은 출력하지 마세요.'
+            prompt += task_prompt
+
+        elif a_type == "descriptive":
+            task_prompt = '질문에 답하고, 문제 해결 과정을 서술한 뒤 최종 정답을 구하세요. 풀이 과정은 문장으로 자연스럽게 설명하고, 계산에 필요한 수치를 포함하세요. 논리적으로 결론까지 도달하도록 작성하세요.'
+            prompt += task_prompt
 
         msgs = []
         if isinstance(img_path, list):
@@ -71,7 +105,7 @@ class IceCreamEduBench(ImageBaseDataset):
 
         data = load(eval_file)
         dataset = self.dataset_name
-        data['q_type'] = [str(x) for x in data['q_type']]
+        data['a_type'] = [str(x) for x in data['a_type']]
         data['prediction'] = [str(x) for x in data['prediction']]
         data['answer'] = [str(x) for x in data['answer']]
         lt = len(data)
@@ -81,11 +115,11 @@ class IceCreamEduBench(ImageBaseDataset):
         log_list = []
 
         for line in lines:
-            q_type = line['q_type']
+            a_type = line['a_type']
             answer = line['answer']
             prediction = line['prediction']
 
-            if q_type == "multi_choices":
+            if a_type == "options":
                 answer = circled_number_to_digit(answer)
                 prediction = extract_answer_number(prediction)
                 correct = is_correct_prediction(prediction, answer)
@@ -105,54 +139,3 @@ class IceCreamEduBench(ImageBaseDataset):
         dump(data, data_log_pth)
         
         return {'acc': pred_correct / len(lines)}
-
-"""
-Question Type
-
-Answer Type
-
-Task instruction
-
-multiple-choice
-
-options
-
-질문에 답하고, 정답인 선택지 번호만 출력하세요. 정답이 하나일 경우 번호 하나만, 여러 개일 경우 쉼표로 구분하여 모두 출력하세요. 해설은 출력하지 마세요.
-
-short-answer
-
-number
-
-질문에 답하고, 정답이 되는 숫자만 출력하세요. 정답이 하나일 경우 숫자 하나만, 여러 개일 경우 쉼표나 번호 등으로 구분하여 모두 출력하세요. 해설이나 설명은 출력하지 마세요.
-
-word
-
-질문에 답하고, 정답이 되는 단어나 구만 출력하세요. 정답이 하나일 경우 단어 하나만, 여러 개일 경우 쉼표나 번호 등으로 구분하여 모두 출력하세요. 해설이나 설명은 출력하지 마세요.
-
-symbol
-
-질문에 답하고, 정답이 되는 기호만 출력하세요. 정답이 하나일 경우 기호 하나만, 여러 개일 경우 쉼표, 번호, 슬래시 등으로 구분하여 모두 출력하세요. 해설이나 설명은 출력하지 마세요.
-
-formula
-
-질문에 답하고, 정답이 되는 수식을 LaTeX 형식으로 출력하세요. 정답이 하나일 경우 수식 하나만, 여러 개일 경우 쉼표나 번호로 구분하여 모두 출력하세요. 해설이나 설명은 출력하지 마세요.
-
-md
-
-질문에 답하고, 정답이 되는 내용을 마크다운 형식의 표로 작성하세요. 해설이나 설명은 출력하지 마세요.
-
-image
-
-질문에 답하고, 정답만 출력하세요. 해설이나 설명은 출력하지 마세요.
-
-mixed
-
-
-
-long-answer
-
-descriptive
-
-질문에 대한 정답을 구체적으로 작성해 주세요.
-
-"""
