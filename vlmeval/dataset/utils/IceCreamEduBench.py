@@ -19,12 +19,34 @@ def circled_number_to_digit(text: str) -> str:
 
 ## 예측값 전처리
 def extract_answer_number(text: str) -> str:
-    # "숫자+번" 패턴 모두 찾기
-    matches = re.findall(r"(\d+)번", text)
-    if matches:
-        return ", ".join(matches)
+    text = text.strip()
+    
+    # 쉼표가 있는 경우: 각 항목을 개별 전처리
+    if ',' in text:
+        parts = text.split(',')
+        cleaned_parts = []
+        for part in parts:
+            part = part.strip()
+            match = re.match(r'^(\d+)(번)?(\.)?(\s+.*)?$', part)
+            if match:
+                cleaned_parts.append(match.group(1))
+            else:
+                cleaned_parts.append(part)
+        return ', '.join(cleaned_parts)
+    
+    # 쉼표 없는 경우: 단일 처리
+    match = re.match(r'^(\d+)(번)?(\.)?(\s+.*)?$', text)
+    if match:
+        return match.group(1)
     else:
-        return text  # 매칭 안 될 경우 원문 반환
+        return text
+# def extract_answer_number(text: str) -> str:
+#     # "숫자+번" 패턴 모두 찾기
+#     matches = re.findall(r"(\d+)번", text)
+#     if matches:
+#         return ", ".join(matches)
+#     else:
+#         return text  # 매칭 안 될 경우 원문 반환
     
 def normalize_answer(answer: str) -> set:
     # 숫자 추출 → 정수 변환 → 집합
