@@ -4,11 +4,11 @@ from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
 class HyperCLOVAX(BaseModel):
 
-    def __init__(self, model_name='/home/jiyeon/바탕화면/yjha/hyperclovax_seed_3b', **kwargs):
-        assert model_name is not None, "Model name must be provided."
-        self.model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True).to(device="cuda")
-        self.preprocessor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+    def __init__(self, model_path, **kwargs):
+        assert model_path is not None, "Model name must be provided."
+        self.model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True).to(device="cuda")
+        self.preprocessor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
                 
     def generate_inner(self, message, dataset=None):
         prompt, image_path = self.message_to_promptimg(message)
