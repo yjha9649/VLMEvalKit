@@ -64,15 +64,22 @@ def localize_df(data, dname, nproc=32):
         data['image_path'] = [x[0] if len(x) == 1 else x for x in ret]
     return data
 
-
 def LMUDataRoot():
-    # if 'LMUData' in os.environ and osp.exists(os.environ['LMUData']):
-    #     return os.environ['LMUData']
-    # home = osp.expanduser('~')
-    # root = osp.join(home, 'LMUData')
-    # os.makedirs(root, exist_ok=True)
-    root = '/Users/yoojin_ha/Desktop/Dev/VLM_Evaluation/VLMEvalKit/LMUData'
+    if 'LMUData' in os.environ and osp.exists(os.environ['LMUData']):
+        return os.environ['LMUData']
+    
+    # 현재 스크립트 기준 루트 설정
+    current_dir = os.getcwd()
+    root = osp.join(current_dir, 'LMUData')
+    os.makedirs(root, exist_ok=True)
     return root
+# def LMUDataRoot():
+#     if 'LMUData' in os.environ and osp.exists(os.environ['LMUData']):
+#         return os.environ['LMUData']
+#     home = osp.expanduser('~')
+#     root = osp.join(home, 'LMUData')
+#     os.makedirs(root, exist_ok=True)
+#     return root
 
 
 def HFCacheRoot():
