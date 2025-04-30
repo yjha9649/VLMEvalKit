@@ -8,7 +8,7 @@ import re
 #     else:
 #         return text  # 매칭 안 될 경우 원문 반환
 
-#### MCQA 평가 방법 ###
+######## options 평가 방법 ########
 ## 답변 전처리
 def circled_number_to_digit(text: str) -> str:
     circled_number_map = {
@@ -54,6 +54,25 @@ def normalize_answer(answer: str) -> set:
 
 def is_correct_prediction(pred: str, gt: str) -> bool:
     return normalize_answer(pred) == normalize_answer(gt)
+
+
+######## Image 평가 방법 ########
+def build_prompt(a_type, pred, gt):
+    return f"""정답 유형: {a_type}\n모델 예측값 (prediction): {pred}\n정답 (ground truth): {gt}\n출력 숫자:"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ##########################
 
 def extract_short_answer(text: str) -> str:

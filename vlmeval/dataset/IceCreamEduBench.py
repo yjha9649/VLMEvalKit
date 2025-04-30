@@ -3,6 +3,7 @@ import pandas as pd
 from .utils.IceCreamEduBench import *
 from ..smp import *
 import os
+from .utils import build_judge
 
 class IceCreamEduBench(ImageBaseDataset):
 
@@ -112,6 +113,10 @@ class IceCreamEduBench(ImageBaseDataset):
         # pool = mp.Pool(16)
         lines = [data.iloc[i] for i in range(lt)]
 
+        system_prompt = """다음은 정답 유형과 모델의 예측값, 정답 데이터입니다. 모델의 예측값(prediction)이 주어진 정답 유형에 따라 정답(ground_truth)과 의미적으로 일치하면 **1**, 의미가 다르거나 틀렸다면 **0**을 출력하세요. 출력은 반드시 숫자 하나(1 또는 0)만 하세요."""
+
+        model = build_judge(temperature=0.2, system_prompt=system_prompt, **judge_kwargs)
+
         log_list = []
 
         for line in lines:
@@ -123,9 +128,20 @@ class IceCreamEduBench(ImageBaseDataset):
                 answer = circled_number_to_digit(answer)
                 prediction = extract_answer_number(prediction)
                 correct = is_correct_prediction(prediction, answer)
+            # image 유형 제외
+            elif a_type == "":
+                user = build_prompt(a_type, prediction, answer)
+            elif a_type in []:
+                pass
+
+
+
+
+
+
             else:
-                prediction = extract_short_answer(prediction)
-                answer = extract_short_answer(answer)
+                # prediction = extract_short_answer(prediction)
+                # answer = extract_short_answer(answer)
                 correct = eval_multi_choice(prediction, answer)
 
             if correct:
