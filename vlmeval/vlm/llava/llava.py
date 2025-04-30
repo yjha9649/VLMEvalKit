@@ -8,7 +8,8 @@ from ...smp import *
 from ...dataset import DATASET_TYPE, DATASET_MODALITY
 import copy
 import requests
-
+import sys
+sys.path.append("/home/jiyeon/바탕화면/yjha/VLMEvalKit/LLaVA")
 
 class LLaVA(BaseModel):
 
