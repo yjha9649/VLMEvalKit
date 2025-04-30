@@ -199,4 +199,5 @@ notebook/
 LMUData/
 yjha*
 .DS_Store
-run.sh
+run.sh\
+LLaVA
