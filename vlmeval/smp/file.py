@@ -65,13 +65,14 @@ def localize_df(data, dname, nproc=32):
     return data
 
 def LMUDataRoot():
-    if 'LMUData' in os.environ and osp.exists(os.environ['LMUData']):
-        return os.environ['LMUData']
+    # if 'LMUData' in os.environ and osp.exists(os.environ['LMUData']):
+    #     return os.environ['LMUData']
     
-    # 현재 스크립트 기준 루트 설정
-    current_dir = os.getcwd()
-    root = osp.join(current_dir, 'LMUData')
-    os.makedirs(root, exist_ok=True)
+    # # 현재 스크립트 기준 루트 설정
+    # current_dir = os.getcwd()
+    # root = osp.join(current_dir, 'LMUData')
+    # os.makedirs(root, exist_ok=True)
+    root = "/Users/yoojin_ha/Desktop/Dev/VLM_Evaluation/VLMEvalKit/LMUData/"
     return root
 # def LMUDataRoot():
 #     if 'LMUData' in os.environ and osp.exists(os.environ['LMUData']):

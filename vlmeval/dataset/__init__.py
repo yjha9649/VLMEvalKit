@@ -58,7 +58,6 @@ from ..smp import *
 from .Omnidocbench.omnidocbench import OmniDocBench
 from .moat import MOAT
 from .mmifeval import MMIFEval
-
 from .IceCreamEduBench import IceCreamEduBench
 
 

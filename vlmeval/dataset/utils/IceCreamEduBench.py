@@ -1,4 +1,5 @@
 import re
+import os
 
 # def extract_answer_number(text: str) -> str:
 #     # 다양한 패턴을 포함하는 정규식
@@ -56,22 +57,69 @@ def is_correct_prediction(pred: str, gt: str) -> bool:
     return normalize_answer(pred) == normalize_answer(gt)
 
 
-######## Image 평가 방법 ########
-def build_prompt(a_type, pred, gt):
-    return f"""정답 유형: {a_type}\n모델 예측값 (prediction): {pred}\n정답 (ground truth): {gt}\n출력 숫자:"""
+######## judge 평가 방법 ########
+def get_eval(judge, message):
+    text, image_path = message
+
+    if image_path is None:
+        return judge.generate(text)
+    else:
+        msg = [
+            {"type": "text", "value": text},
+            {"type": "image", "value": image_path}
+        ]
+        return judge.generate(msg)
+
+def build_prompt(line):
+    a_type = line['a_type']
+    question = line['question']
+    answer = line['answer']
+    prediction = line['prediction']
+
+    user_prompt = (
+        f"정답 유형: {a_type}\n문제: {question}\n정답 (ground truth): {answer}"
+        f"\n모델 예측값 (prediction): {prediction}\n출력 숫자:"
+    )
+
+    if a_type in ["number", "word", "symbol", "formula", "md"] or "mixed" in a_type:
+        system_prompt = (
+            "다음은 정답 유형과 모델의 예측값, 정답 데이터입니다. "
+            "모델의 예측값(prediction)이 주어진 정답 유형에 따라 정답(ground truth)과 의미적으로 일치하면 **1**, "
+            "의미가 다르거나 틀렸다면 **0**을 출력하세요. 출력은 반드시 숫자 하나(1 또는 0)만 하세요."
+        )
+        return system_prompt + "\n\n" + user_prompt, None
+
+    elif a_type == "descriptive":
+        system_prompt = (
+            "다음은 서술형 정답 유형에 해당하는 문제의 모델 예측값과 정답 데이터입니다. "
+            "예측값이 문제 해결 과정을 논리적으로 서술하고, 정답과 동일한 결론에 도달했다면 1, 그렇지 않으면 0을 출력하세요. "
+            "풀이 과정이 생략되었거나 논리적으로 타당하지 않거나, 결론이 틀릴 경우에는 0으로 판단하세요. "
+            "출력은 반드시 숫자 하나(1 또는 0)만 하세요."
+        )
+        return system_prompt + "\n\n" + user_prompt, None
+
+    elif a_type == "image":
+        system_prompt = (
+            "당신은 입력된 이미지를 기반으로 정답 여부를 판단하는 평가자입니다. "
+            "이미지를 보고 문제의 정답이 무엇인지 판단한 후, 모델의 예측값(prediction)이 해당 정답(ground truth)과 의미적으로 "
+            "일치하는지를 평가하세요. 예측값이 정답과 동일하거나, 이미지의 정답 요소를 정확히 지칭하고 있다면 `1`, "
+            "틀리거나 다른 요소를 선택했다면 `0`을 출력하세요. 출력은 반드시 숫자 하나(1 또는 0)만 하세요."
+        )
+        img_path = os.path.join(
+            "/Users/yoojin_ha/Desktop/Dev/Data/VLM_Data/아이스크림에듀/origin_data/image",
+            re.match(r"img_(\d+)_\d+", line['answer'].strip("<>")).group(1),
+            line['answer'].strip("<>") + ".png",
+        )
+        return system_prompt + "\n\n" + user_prompt, img_path
+
+    else:
+        raise ValueError(f"Unknown answer type: {a_type}")
 
 
-
-
-
-
-
-
-
-
-
-
-
+def IceCreamEduBench_atomeval(model, line):
+    message = build_prompt(line)  # returns (text, image_path)
+    result = get_eval(model, message)
+    return result
 
 ##########################
 
