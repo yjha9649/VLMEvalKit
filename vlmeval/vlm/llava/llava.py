@@ -8,7 +8,8 @@ from ...smp import *
 from ...dataset import DATASET_TYPE, DATASET_MODALITY
 import copy
 import requests
-
+import sys
+sys.path.append("/home/jiyeon/바탕화면/yjha/VLMEvalKit/LLaVA")
 
 class LLaVA(BaseModel):
 
@@ -60,8 +61,11 @@ class LLaVA(BaseModel):
             else:
                 logging.critical("Unknown error when loading LLaVA model.")
             raise err
+        
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.dtype = torch.float16 if self.device.type == "cuda" else torch.float32
 
-        self.model = self.model.cuda()
+        self.model = self.model.to(self.device, dtype=self.dtype)
         self.conv_mode = "llava_v1"
 
         kwargs_default = dict(
@@ -153,15 +157,16 @@ class LLaVA(BaseModel):
         args = abstractproperty()
         args.image_aspect_ratio = "pad"
         image_tensor = process_images(images, self.image_processor, args).to(
-            "cuda", dtype=torch.float16
+            # "cuda", dtype=torch.float16
+            self.device, dtype=self.dtype  # ✅ CPU용 dtype
         )
 
         input_ids = (
             tokenizer_image_token(
                 prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
             )
+            .long().to(self.device)
             .unsqueeze(0)
-            .cuda()
         )
         keywords = [self.stop_str]
         stopping_criteria = KeywordsStoppingCriteria(
@@ -195,7 +200,8 @@ class LLaVA(BaseModel):
         args.image_aspect_ratio = "pad"
         if images:
             image_tensor = process_images(images, self.image_processor, args).to(
-                "cuda", dtype=torch.float16
+                # "cuda", dtype=torch.float16
+                self.device, dtype=self.dtype  # ✅ CPU용 dtype
             )
         else:
             image_tensor = None
@@ -206,8 +212,8 @@ class LLaVA(BaseModel):
             tokenizer_image_token(
                 prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
             )
+            .long().to(self.device)
             .unsqueeze(0)
-            .cuda()
         )
         keywords = [self.stop_str]
         stopping_criteria = KeywordsStoppingCriteria(
@@ -284,7 +290,7 @@ class LLaVA_Next(BaseModel):
                 )
 
         model = model.eval()
-        self.model = model.cuda()
+        self.model = model.to(device)
         kwargs_default = dict(
             do_sample=False, temperature=0, max_new_tokens=2048, top_p=None, num_beams=1
         )
@@ -396,7 +402,8 @@ class LLaVA_Next(BaseModel):
             conversation, add_generation_prompt=True
         )
         inputs = self.processor(prompt, images, return_tensors="pt").to(
-            "cuda", torch.float16
+            # "cuda", torch.float16
+            "cpu", torch.float32
         )
         output = self.model.generate(**inputs, **self.kwargs)
         answer = self.processor.decode(output[0], skip_special_token=True)
@@ -431,7 +438,7 @@ class LLaVA_Next2(BaseModel):
         tokenizer, model, image_processor, _ = load_pretrained_model(
             model_path, None, model_name, device_map=None
         )
-        model.cuda().eval()
+        model.to(device).eval()
         model.tie_weights()
 
         if "llama3" in model_path.lower():
@@ -459,7 +466,7 @@ class LLaVA_Next2(BaseModel):
         preprocess = self.image_processor.preprocess
         image_tokenizer = self.tokenizer_image_token
         image_tensor = [
-            preprocess(f, return_tensors="pt")["pixel_values"][0].half().cuda()
+            preprocess(f, return_tensors="pt")["pixel_values"][0].half().to(device)
             for f in images
         ]
         image_tensor = torch.stack(image_tensor)
@@ -472,7 +479,7 @@ class LLaVA_Next2(BaseModel):
         input_ids = image_tokenizer(
             prompt_question, self.tokenizer, self.IMAGE_TOKEN_INDEX, return_tensors="pt"
         )
-        input_ids = input_ids.unsqueeze(0).cuda()
+        input_ids = input_ids.unsqueeze(0)
 
         stop_str = conv.sep if conv.sep_style != self.SeparatorStyle.TWO else conv.sep2
         keywords = [stop_str]
@@ -584,7 +591,7 @@ class LLaVA_OneVision(BaseModel):
                     device_map="cpu",
                     overwrite_config=overwrite_config,
                 )
-                model.cuda()
+                model.to(device)
         else:
             tokenizer, model, image_processor, _ = load_pretrained_model(
                 model_path,
@@ -651,7 +658,7 @@ class LLaVA_OneVision(BaseModel):
         input_ids = self.tokenizer_image_token(
             prompt_question, self.tokenizer, self.IMAGE_TOKEN_INDEX, return_tensors="pt"
         )
-        input_ids = input_ids.unsqueeze(0).cuda()
+        input_ids = input_ids.unsqueeze(0)
 
         stop_str = conv.sep if conv.sep_style != self.SeparatorStyle.TWO else conv.sep2
         keywords = [stop_str]
@@ -709,7 +716,7 @@ class LLaVA_OneVision(BaseModel):
                 "pixel_values"
             ]
             .half()
-            .cuda()
+            .to(device)
         )
         image_tensors.append(frames)
 
@@ -721,7 +728,7 @@ class LLaVA_OneVision(BaseModel):
         input_ids = self.tokenizer_image_token(
             prompt_question, self.tokenizer, self.IMAGE_TOKEN_INDEX, return_tensors="pt"
         )
-        input_ids = input_ids.unsqueeze(0).cuda()
+        input_ids = input_ids.unsqueeze(0)
         image_sizes = [frame.size for frame in video_frames]
         modalities = ["video"] * len(video_frames)
 
@@ -745,7 +752,7 @@ class LLaVA_OneVision(BaseModel):
         text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
         return text_outputs
 
-    def load_video(self, video_path, max_frames_num, force_sample=False, fps=1):
+    def load_video(self, video_path, max_frames_num, fps=1, force_sample=False):
         from decord import VideoReader, cpu
         import numpy as np
 

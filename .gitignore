@@ -194,3 +194,10 @@ apple.jpg
 assets/LOGO.png
 api_list.txt
 vlmeval/gemini_tmp.py
+# notebooks
+notebook/
+LMUData/
+yjha*
+.DS_Store
+run.sh\
+LLaVA

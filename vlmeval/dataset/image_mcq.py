@@ -101,6 +101,9 @@ class ImageMCQDataset(ImageBaseDataset):
             'https://huggingface.co/datasets/ccvl/3DSRBench/'
             'resolve/main/3dsrbench_v1_vlmevalkit_circular.tsv'
         ),
+        'MMCR': 'http://opencompass.openxlab.space/utils/VLMEval/MMCR.tsv',
+        'MMSci_DEV_MCQ': 'https://opencompass.openxlab.space/utils/VLMEval/MMSci_DEV_MCQ.tsv',
+        "MMVP": "http://opencompass.openxlab.space/utils/VLMEval/MMVP.tsv",
         # For Internal Use Only
         'MMBench_V11_MINI': 'https://opencompass.openxlab.space/utils/TEST/MMBench_V11_MINI.tsv',
         'MMStar_MINI': 'https://opencompass.openxlab.space/utils/TEST/MMStar_MINI.tsv',
@@ -158,6 +161,9 @@ class ImageMCQDataset(ImageBaseDataset):
         'WorldMedQA-V': '441e63875e30c87f5750528b57b41285',
         "VisOnlyQA-VLMEvalKit": 'cf460a31d2acb8d3a7cecd0e69298bfa',
         '3DSRBench': '13a99f33164dc1b9faf0e8b8b01fd6f2',
+        'MMCR': '9052635f2c3835bdb87755ef73564f5e',
+        'MMSci_DEV_MCQ': '71c82f81920a84526803574f719099a7',
+        "MMVP": "8cb732b141a0cba5b42159df2839e557",
     }
 
     DATASET_URL.update(MMMB_URLS)
@@ -203,7 +209,9 @@ class ImageMCQDataset(ImageBaseDataset):
         return msgs
 
     def evaluate(self, eval_file, **judge_kwargs):
-        from .utils.multiple_choice import report_acc, report_acc_MMT, mcq_circular_eval, mcq_vanilla_eval
+        from .utils.multiple_choice import (
+            report_acc, report_acc_MMT, report_acc_MMSci, mcq_circular_eval, mcq_vanilla_eval
+        )
         # assert dataset is not None
         dataset_map = {
             'MMBench_TEST_EN': 'MMBench', 'MMBench_TEST_EN_V11': 'MMBench_V11',
@@ -215,7 +223,7 @@ class ImageMCQDataset(ImageBaseDataset):
         nproc = judge_kwargs.pop('nproc', 4)
 
         circular = False
-        if listinstr(['mmbench', 'ccbench', 'circular'], dataset.lower()):
+        if listinstr(['mmbench', 'ccbench', 'circular', 'mmcr'], dataset.lower()):
             data = load(eval_file)
             data['index'] = [int(x) for x in data['index']]
             dump(data, eval_file)
@@ -268,6 +276,8 @@ class ImageMCQDataset(ImageBaseDataset):
         # May have different report acc functions for different datasets
         if 'MMT' in dataset:
             acc = report_acc_MMT(data)
+        elif 'MMSci' in dataset:
+            acc = report_acc_MMSci(data)
         else:
             acc = report_acc(data)
 
@@ -285,6 +295,17 @@ class ImageMCQDataset(ImageBaseDataset):
                            explicitly specify the version of the dataset when you report results.')
 
         return acc
+
+
+class MedXpertQA_MM_test(ImageMCQDataset):
+
+    DATASET_URL = {
+        'MedXpertQA_MM_test': 'https://opencompass.openxlab.space/utils/VLMEval/MedXpertQA_MM_test.tsv',
+    }
+
+    DATASET_MD5 = {
+        'MedXpertQA_MM_test': '73c12d28ebdfca97c5fd3c3be3fe357b',
+    }
 
 
 class MMMUDataset(ImageMCQDataset):
@@ -359,7 +380,7 @@ class MMMUProDataset(MMMUDataset):
             tgt_path = toliststr(line['image_path'])
         else:
             tgt_path = self.dump_image(line)
-        
+
         if 'MMMU_Pro_V' in self.dataset_name:
             question = 'Answer the following multiple-choice question in the image. '
             if 'COT' in self.dataset_name:
@@ -428,11 +449,11 @@ class MMMUProDataset(MMMUDataset):
             dump(data, tgt)
             res = super().evaluate(tgt, **judge_kwargs)
             acc_org = eval_file.replace('.xlsx', '_acc.csv')
-            acc_now = eval_file.replace('.xlsx', '_cotpost_acc.csv') 
+            acc_now = eval_file.replace('.xlsx', '_cotpost_acc.csv')
             shutil.copy(acc_now, acc_org)
             return res
         else:
-            return super().evaluate(eval_file, **judge_kwargs)  
+            return super().evaluate(eval_file, **judge_kwargs)
 
 
 class MUIRDataset(ImageMCQDataset):
@@ -865,6 +886,130 @@ class MMERealWorld(ImageMCQDataset):
         return rating
 
 
+class CVBench(ImageMCQDataset):
+    """CV-Bench, composed of two sub datasets:
+    CV-Bench-2D: 2D computer vision tasks
+    CV-Bench-3D: 3D computer vision tasks
+
+    Reference:
+    - https://cambrian-mllm.github.io/
+    - https://huggingface.co/datasets/nyu-visionx/CV-Bench
+
+    Evaluation strategy:
+        See [Cambrian-1](https://arxiv.org/pdf/2406.16860) Appendix C
+    """
+    DATASET_URL = {
+        "CV-Bench-2D": "https://huggingface.co/datasets/maosong/CV-Bench/resolve/main/CV-Bench-2D.tsv",
+        "CV-Bench-3D": "https://huggingface.co/datasets/maosong/CV-Bench/resolve/main/CV-Bench-3D.tsv",
+    }
+
+    DATASET_MD5 = {
+        "CV-Bench-2D": "a7cff4cc2857cc237ee2b89e62bccb2d",
+        "CV-Bench-3D": "bb94c0d568d652d15b60e001ac40a170",
+    }
+
+    def build_prompt(self, line):
+        if isinstance(line, int):
+            line = self.data.iloc[line]
+
+        if self.meta_only:
+            tgt_path = toliststr(line["image_path"])
+        else:
+            tgt_path = self.dump_image(line)
+
+        msgs = []
+        if isinstance(tgt_path, list):
+            msgs.extend([dict(type="image", value=p) for p in tgt_path])
+        else:
+            msgs = [dict(type="image", value=tgt_path)]
+        # use the prompt provided by the dataset
+        msgs.append(dict(type="text", value=line["prompt"]))
+        return msgs
+
+    def evaluate(self, eval_file, **judge_kwargs):
+        from .utils.multiple_choice import mcq_vanilla_eval, report_acc
+
+        nproc = judge_kwargs.pop("nproc", 4)
+
+        suffix = eval_file.split(".")[-1]
+        model_name = judge_kwargs.get("model", "extract_matching")
+
+        if model_name == "exact_matching":
+            model = None
+        elif gpt_key_set():
+            model = build_judge(**judge_kwargs)
+            if not model.working():
+                warnings.warn(DEBUG_MESSAGE)
+                model = None
+        else:
+            warnings.warn(
+                "OPENAI_API_KEY is not set properly, will use exact matching for evaluation"
+            )
+            model = None
+
+        result_file = eval_file.replace(f".{suffix}", f"_{model_name}_result.pkl")
+
+        data = load(eval_file)
+        data = data.sort_values(by="index")
+        data["prediction"] = [str(x) for x in data["prediction"]]
+        # If not choice label, then use lower case
+        for k in data.keys():
+            data[k.lower() if k not in list(string.ascii_uppercase) else k] = data.pop(
+                k
+            )
+
+        meta = self.data
+        meta_q_map = {x: y for x, y in zip(meta["index"], meta["question"])}
+        data_map = {x: y for x, y in zip(data["index"], data["question"])}
+        for k in data_map:
+            assert (
+                k in meta_q_map
+            ), f"eval_file should be the same as or a subset of dataset {self.dataset_name}"
+
+        score_file = eval_file.replace(f".{suffix}", "_acc.csv")
+
+        if osp.exists(score_file):
+            acc = load(score_file)
+            return acc
+        data = mcq_vanilla_eval(
+            model, data, meta, nproc, result_file, self.dataset_name
+        )
+        dump(data, eval_file.replace(f".{suffix}", f"_{model}_result.{suffix}"))
+        data = load(eval_file.replace(f".{suffix}", f"_{model}_result.{suffix}"))
+
+        if all(data["split"] == "2D"):  # 2D
+            acc = self.report_accuracy(data)
+        else:  # 3D, use default evaluation strategy
+            acc = report_acc(data)
+
+        score_file = eval_file.replace(f".{suffix}", "_acc.csv")
+        dump(acc, score_file)
+
+        return acc
+
+    def report_accuracy(self, data):
+        # CV-Bench-2D evaluation strategy
+        # first calculate the accuracy for each source
+        # then calculate the overall accuracy by averaging across all sources
+        res = defaultdict(list)
+
+        splits = list(set(data["split"]))
+        res["split"] = splits
+
+        sources = set(data["source"])
+        for source in sources:
+            sub_df = data[data["source"] == source]
+            res[source] = [
+                np.mean(sub_df[sub_df["split"] == sp]["hit"]) for sp in res["split"]
+            ]
+        res = pd.DataFrame(res)
+        res["Overall"] = 0
+        for source in sources:
+            res["Overall"] += res[source]
+        res["Overall"] = res["Overall"] / len(sources)
+        return res
+
+
 class HRBenchDataset(ImageMCQDataset):
 
     DATASET_URL = {
@@ -1125,7 +1270,8 @@ class WeMath(ImageBaseDataset):
         score_pth = storage.replace('.xlsx', '_score.csv')
         dump(combine_score, score_pth)
         return combine_score
-    
+
+
 class VMCBenchDataset(ImageBaseDataset):
 
     TYPE = 'MCQ'
@@ -1137,6 +1283,7 @@ class VMCBenchDataset(ImageBaseDataset):
 
     DATASET_MD5 = {
     }
+
     def build_prompt(self, line):
         if isinstance(line, int):
             line = self.data.iloc[line]
@@ -1159,7 +1306,7 @@ class VMCBenchDataset(ImageBaseDataset):
         if len(options):
             prompt += options_prompt
             prompt += "Answer with the option's letter from the given choices directly. \n"
-            
+
         msgs = []
         if isinstance(tgt_path, list):
             msgs.extend([dict(type='image', value=p) for p in tgt_path])
@@ -1183,3 +1330,152 @@ class VMCBenchDataset(ImageBaseDataset):
         dump(acc, score_file)
 
         return acc
+
+
+class LEGO(ImageMCQDataset):
+
+    DATASET_URL = {
+        'LEGO': 'https://opencompass.openxlab.space/utils/VLMEval/LEGO.tsv',
+    }
+    DATASET_MD5 = {'LEGO': 'd595f50e1fb4d4eb12cbc95297893ffc'}
+
+    @staticmethod
+    def split_LEGO(msgs):
+        text, images = None, []
+        for s in msgs:
+            if s['type'] == 'image':
+                images.append(s['value'])
+            elif s['type'] == 'text':
+                assert text is None
+                text = s['value']
+        text_segs = text.split('<image ')
+        if len(text_segs) == 1:
+            return msgs
+
+        segs = [dict(type='text', value=text_segs[0])]
+        for i, seg in enumerate(text_segs):
+            if i == 0:
+                continue
+            assert istype(seg[0], int) and seg[1] == '>'
+            image_idx = int(seg[0]) - 1
+            segs.append(dict(type='image', value=images[image_idx]))
+            segs.append(dict(type='text', value=seg[2:]))
+        return segs
+
+    def build_prompt_sort(self, line):
+
+        if isinstance(line, int):
+            line = self.data.iloc[line]
+
+        if self.meta_only:
+            tgt_path = toliststr(line['image_path'])
+        else:
+            tgt_path = self.dump_image(line)
+
+        question = line['question']
+        options = {
+            cand: line[cand]
+            for cand in string.ascii_uppercase
+            if cand in line and not pd.isna(line[cand])
+        }
+        options_prompt = 'Options:\n'
+        for key, item in options.items():
+            options_prompt += f'{key}. {item}\n'
+        hint = line['hint'] if ('hint' in line and not pd.isna(line['hint'])) else None
+        prompt = ''
+        if hint is not None:
+            prompt += f'Hint: {hint}\n'
+        prompt += f'Question: {question}\n'
+        if len(options):
+            prompt += options_prompt
+            prompt += (
+                "Please respond with only the sequence of letters (e.g., ‘BDAC’) "
+                "that correctly orders the steps.\n"
+            )
+
+        msgs = []
+        if isinstance(tgt_path, list):
+            msgs.extend([dict(type='image', value=p) for p in tgt_path])
+        else:
+            msgs = [dict(type='image', value=tgt_path)]
+        msgs.append(dict(type='text', value=prompt))
+
+        return msgs
+
+    def build_prompt(self, line):
+        if line['question_type'] == 'sort':
+            msgs = self.build_prompt_sort(line)
+        else:
+            msgs = super().build_prompt(line)
+        msgs = self.split_LEGO(msgs)
+        return msgs
+
+
+class VisuLogic(ImageMCQDataset):
+    TYPE = "MCQ"
+    DATASET_URL = {
+        'VisuLogic': 'https://huggingface.co/datasets/VisuLogic/VisuLogic/resolve/main/data.tsv'
+    }
+    DATASET_MD5 = {
+        'VisuLogic': 'b0820b5ec1e01dfe3951927f0def73b6',
+    }
+
+    def build_prompt(self, line):
+        if isinstance(line, int):
+            line = self.data.iloc[line]
+
+        if self.meta_only:
+            tgt_path = toliststr(line['image_path'])
+        else:
+            tgt_path = self.dump_image(line)
+
+        question = line['question']
+        prompt = ''
+        prompt += question
+        prompt += "\nSolve the complex visual logical reasoning problem through step-by-step reasoning."
+        prompt += "Think about the reasoning process first "
+        prompt += "and answer the question following this format: Answer: \\boxed{$LETTER}"
+
+        msgs = []
+        if isinstance(tgt_path, list):
+            msgs.extend([dict(type='image', value=p) for p in tgt_path])
+        else:
+            msgs = [dict(type='image', value=tgt_path)]
+        msgs.append(dict(type='text', value=prompt))
+
+        return msgs
+
+    def evaluate(self, eval_file, **judge_kwargs):
+        from .utils.visulogic import VisuLogic_acc
+        from .utils.multiple_choice import mcq_vanilla_eval
+
+        # model = judge_kwargs['model']
+        model = judge_kwargs.get('model', 'exact_matching')
+        assert model in ['exact_matching', 'gpt-4-0125', 'gpt-4-turbo', 'gpt-4o-mini'], model
+        name_str_map = {'gpt-4-0125': 'gpt4', 'gpt-4-turbo': 'gpt4-turbo', 'gpt-4o-mini': 'gpt4o-mini'}
+        name_str = name_str_map[model] if model in name_str_map else model
+
+        if model == 'exact_matching':
+            model = None
+        elif gpt_key_set():
+            model = build_judge(**judge_kwargs)
+            if not model.working():
+                warnings.warn('OPENAI API is not working properly, will use exact matching for evaluation')
+                warnings.warn(DEBUG_MESSAGE)
+                model = None
+        else:
+            warnings.warn('OPENAI_API_KEY is not set properly, will use exact matching for evaluation')
+            model = None
+
+        suffix = eval_file.split('.')[-1]
+        storage = eval_file.replace(f'.{suffix}', f'_{name_str}.xlsx')
+
+        if osp.exists(storage):
+            accuracy_scores = VisuLogic_acc(storage)
+        else:
+            accuracy_scores = VisuLogic_acc(eval_file)
+        combine_score = {**accuracy_scores,}
+        combine_score = pd.DataFrame(combine_score)
+        score_pth = storage.replace('.xlsx', '_score.csv')
+        dump(combine_score, score_pth)
+        return combine_score
